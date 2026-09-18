@@ -81,6 +81,7 @@ resources = {
         api_key=ScraperConfig.API_KEY,
         max_attempts=ScraperConfig.MAX_ATTEMPTS,
         min_page_bytes=ScraperConfig.MIN_PAGE_BYTES,
+        escalation=ScraperConfig.ESCALATION,
         timeout=TimeoutConfig.SCRAPER,
     ),
 }

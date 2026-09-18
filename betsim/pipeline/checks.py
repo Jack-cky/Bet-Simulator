@@ -1,10 +1,11 @@
 import pandas as pd
 from dagster import AssetCheckResult, MetadataValue, asset_check
 
+from betsim.pipeline.partitions import partition_week
 from betsim.shared.settings import SentinelConfig
 
 
-@asset_check(asset="jleague", blocking=True)
+@asset_check(asset="jleague", blocking=True, partitions_def=partition_week)
 def nonempty(jleague: pd.DataFrame) -> AssetCheckResult:
     n = len(jleague)
     return AssetCheckResult(
@@ -13,7 +14,7 @@ def nonempty(jleague: pd.DataFrame) -> AssetCheckResult:
     )
 
 
-@asset_check(asset="jleague", blocking=True)
+@asset_check(asset="jleague", blocking=True, partitions_def=partition_week)
 def unique_gid(jleague: pd.DataFrame) -> AssetCheckResult:
     dupes = int(jleague["gid"].duplicated().sum())
     return AssetCheckResult(
@@ -22,7 +23,7 @@ def unique_gid(jleague: pd.DataFrame) -> AssetCheckResult:
     )
 
 
-@asset_check(asset="jleague", blocking=True)
+@asset_check(asset="jleague", blocking=True, partitions_def=partition_week)
 def target_present(jleague: pd.DataFrame) -> AssetCheckResult:
     real = jleague[jleague["season"] != SentinelConfig.SEASON]
     missing = int(real["hcap_res"].isna().sum())
@@ -32,7 +33,7 @@ def target_present(jleague: pd.DataFrame) -> AssetCheckResult:
     )
 
 
-@asset_check(asset="jleague", blocking=True)
+@asset_check(asset="jleague", blocking=True, partitions_def=partition_week)
 def rate_bounds(jleague: pd.DataFrame) -> AssetCheckResult:
     out_of_range = {}
     for col, lo, hi in (
@@ -49,7 +50,7 @@ def rate_bounds(jleague: pd.DataFrame) -> AssetCheckResult:
     )
 
 
-@asset_check(asset="jleague", blocking=True)
+@asset_check(asset="jleague", blocking=True, partitions_def=partition_week)
 def inference_templates_present(
     jleague: pd.DataFrame,
 ) -> AssetCheckResult:

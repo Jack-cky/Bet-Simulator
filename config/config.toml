@@ -19,6 +19,11 @@ port = 5000
 api_url = "https://api.zenrows.com/v1/"
 max_attempts = 3
 min_page_bytes = 50000
+escalation = [
+    {},
+    { js_render = "true" },
+    { js_render = "true", premium_proxy = "true" },
+]
 
 [season]
 rollover_month = 8

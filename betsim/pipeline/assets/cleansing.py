@@ -4,15 +4,14 @@ import numpy as np
 import pandas as pd
 from dagster import (
     AssetExecutionContext,
-    AssetIn,
     AssetOut,
     Failure,
-    LastPartitionMapping,
     Output,
     multi_asset,
 )
 
 from betsim.pipeline.io import write_artefact
+from betsim.pipeline.partitions import partition_week
 from betsim.shared.settings import ScheduleConfig, SeasonConfig
 
 
@@ -141,9 +140,7 @@ def normalise_matches(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 @multi_asset(
-    ins={
-        "match_results": AssetIn(partition_mapping=LastPartitionMapping()),
-    },
+    partitions_def=partition_week,
     outs={
         "fixtures": AssetOut(
             description=(

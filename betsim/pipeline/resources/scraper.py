@@ -8,6 +8,7 @@ class ScraperResource(ConfigurableResource):
     max_attempts: int
     min_page_bytes: int
     timeout: int
+    escalation: list[dict[str, str]]
 
     def get(self, url: str) -> requests.Response:
         log = get_dagster_logger()
@@ -15,7 +16,11 @@ class ScraperResource(ConfigurableResource):
             try:
                 response = requests.get(
                     self.api_url,
-                    params={"apikey": self.api_key, "url": url},
+                    params={
+                        "apikey": self.api_key,
+                        "url": url,
+                        **self.escalation[min(attempt, len(self.escalation)) - 1],
+                    },
                     timeout=self.timeout,
                 )
             except requests.RequestException as exc:

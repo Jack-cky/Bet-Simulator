@@ -12,6 +12,7 @@ from scipy.stats import poisson
 from statsmodels.tools.sm_exceptions import PerfectSeparationWarning
 
 from betsim.pipeline.io import write_artefact
+from betsim.pipeline.partitions import partition_week
 from betsim.pipeline.resources import MySQLResource
 from betsim.shared.settings import SentinelConfig
 
@@ -373,11 +374,16 @@ def build_jleague(fixtures: pd.DataFrame, plays: pd.DataFrame) -> pd.DataFrame:
         .pipe(populate_temporary_gid)
 
     if len(jl) != len(fixtures):
+        dups = jl.loc[
+            jl.duplicated(["gdt", "home", "away"], keep=False),
+            ["gid", "gdt", "home", "away"],
+        ].drop_duplicates(subset="gid")
         raise Failure(
             description=(
                 "Expected the engineered J-League to contain one row per "
                 f"fixture, but found {len(jl)} J-League rows for "
-                f"{len(fixtures)} fixtures."
+                f"{len(fixtures)} fixtures. Duplicated: "
+                f"{dups.to_dict(orient='records')}"
             ),
             allow_retries=False,
         )
@@ -391,6 +397,7 @@ def build_jleague(fixtures: pd.DataFrame, plays: pd.DataFrame) -> pd.DataFrame:
         "Engineers Elo, expected-goals, form, and head-to-head features "
         "(plus inference templates) for training and inference."
     ),
+    partitions_def=partition_week,
     group_name="FeatureEngineering",
     retry_policy=RetryPolicy(max_retries=3, delay=30),
 )

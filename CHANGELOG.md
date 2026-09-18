@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.1.3] - 2026-09-18
+
+Improved weekly backfills and scraping reliability after timezone-related parsing failures.
+
+### Added
+- Added support for running `python -m betsim.pipeline.main <partition>` against a specific weekly partition (e.g. `2026-09-03`) instead of the latest one.
+
+### Changed
+- Partitioned the cleansing and feature-engineering assets by week so a backfill run loads its own `match_results` partition rather than always the latest one.
+- Scraper retries now escalate ZenRows parameters per attempt (plain, then `js_render`, then `premium_proxy`), configured under `[scraper].escalation`, instead of repeating the same blocked request.
+- Kick-off parsing falls back to the server-side `startDate` attribute (with a 12:00 GMT placeholder time) when a JS-rendered page localises the visible date to the proxy's timezone.
+- The one-row-per-fixture guard in feature engineering now lists the duplicated fixtures in its failure message.
+
 ## [3.1.2] - 2026-09-12
 
 Improved endpoint recovery and scraping reliability after unexpected external service interruptions.

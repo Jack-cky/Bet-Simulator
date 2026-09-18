@@ -71,6 +71,7 @@ class ScraperConfig:
     API_URL = TOML["scraper"]["api_url"]
     MAX_ATTEMPTS = TOML["scraper"]["max_attempts"]
     MIN_PAGE_BYTES = TOML["scraper"]["min_page_bytes"]
+    ESCALATION = TOML["scraper"]["escalation"]
 
 
 class ScheduleConfig:

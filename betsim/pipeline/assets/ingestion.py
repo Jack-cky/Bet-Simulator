@@ -58,6 +58,18 @@ def fetch_sources(
     )
 
 
+def parse_kickoff(soup: BeautifulSoup) -> str | None:
+    kickoff = soup.find("div", class_="date_bah")
+    if kickoff and kickoff.text.endswith("GMT"):
+        return kickoff.text
+
+    start = soup.find("time", itemprop="startDate")
+    if start and start.get("datetime"):
+        year, month, day = start["datetime"].split("-")
+        return f"{day}/{month}/{year} 12:00 GMT"
+    return None
+
+
 def scrape_match_page(
     scraper: ScraperResource,
     season: str,
@@ -69,7 +81,6 @@ def scrape_match_page(
 
     soup = BeautifulSoup(html, "html.parser")
 
-    date = soup.find("div", class_="date_bah")
     home = soup.find("span", class_="homeTeam")
     away = soup.find("span", class_="awayTeam")
     full_goal = soup.find("b", class_="l_scr")
@@ -77,7 +88,7 @@ def scrape_match_page(
     handicap = soup.find("span", class_="forepr ashc")
 
     return {
-        "date": date.text if date else None,
+        "date": parse_kickoff(soup),
         "home": home.text if home else None,
         "away": away.text if away else None,
         "full_goal": full_goal.text if full_goal else None,
