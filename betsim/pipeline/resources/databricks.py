@@ -1,7 +1,6 @@
-import numpy as np
-import pandas as pd
 from dagster import ConfigurableResource
 from mlflow.deployments import get_deploy_client
+from requests.exceptions import HTTPError
 
 
 class DatabricksResource(ConfigurableResource):
@@ -12,13 +11,14 @@ class DatabricksResource(ConfigurableResource):
     def get_client(self):
         return get_deploy_client("databricks")
 
-    def predict(self, df: pd.DataFrame) -> pd.DataFrame:
-        data = df.replace({np.nan: None}).to_dict(orient="split")
-        response = self.get_client().predict(
-            endpoint=self.endpoint,
-            inputs={"dataframe_split": data},
-        )
-        return pd.DataFrame(response["predictions"])
+    def endpoint_exists(self) -> bool:
+        try:
+            self.get_client().get_endpoint(self.endpoint)
+        except HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                return False
+            raise
+        return True
 
     def get_endpoint_readiness(self) -> bool:
         endpoint = self.get_client().get_endpoint(self.endpoint)
@@ -37,16 +37,25 @@ class DatabricksResource(ConfigurableResource):
 
         return status
 
+    def get_endpoint_config(self, model_uc: str, version: str) -> dict:
+        return {
+            "served_entities": [{
+                "entity_name": model_uc,
+                "entity_version": version,
+                "workload_size": "Small",
+                "workload_type": "CPU",
+                "scale_to_zero_enabled": True,
+            }],
+        }
+
+    def create_endpoint(self, model_uc: str, version: str) -> None:
+        self.get_client().create_endpoint(config={
+            "name": self.endpoint,
+            "config": self.get_endpoint_config(model_uc, version),
+        })
+
     def update_endpoint(self, model_uc: str, version: str) -> None:
         self.get_client().update_endpoint_config(
             endpoint=self.endpoint,
-            config={
-                "served_entities": [{
-                    "entity_name": model_uc,
-                    "entity_version": version,
-                    "workload_size": "Small",
-                    "workload_type": "CPU",
-                    "scale_to_zero_enabled": True,
-                }],
-            },
+            config=self.get_endpoint_config(model_uc, version),
         )

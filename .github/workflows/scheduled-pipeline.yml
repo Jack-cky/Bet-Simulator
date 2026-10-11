@@ -1,9 +1,9 @@
 name: Scheduled Pipeline
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 15 * * 4"
-      timezone: "Asia/Hong_Kong"
+  # schedule:
+  #   - cron: "0 15 * * 4"
+  #     timezone: "Asia/Hong_Kong"
 
 jobs:
   run-pipeline:

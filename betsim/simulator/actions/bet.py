@@ -3,7 +3,7 @@ from time import monotonic, sleep
 
 import pandas as pd
 import requests
-from taipy.gui import invoke_long_callback
+from taipy.gui import invoke_long_callback, notify
 
 from betsim.simulator.actions.telemetry import track_event
 from betsim.shared.settings import DatabricksConfig, SimulatorConfig
@@ -85,6 +85,12 @@ def complete_prediction(state, status, prediction=None) -> None:
 
     if status is not True:
         state.is_predict = False
+        notify(
+            state,
+            "warning",
+            "The prediction service is temporarily unavailable. "
+            "Please try again 1 day later.",
+        )
         return
 
     state.prediction = prediction

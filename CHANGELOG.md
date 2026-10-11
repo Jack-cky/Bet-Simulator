@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.1.4] - 2026-10-11
+
+Decoupled the weekly pipeline from the Databricks serving endpoint, which Databricks Free Edition removes about a week after deployment.
+
+### Changed
+- Drift detection and champion/challenger evaluation now score the champion offline via the MLflow `champion` alias instead of calling the serving endpoint.
+- The `endpoint` asset creates the serving endpoint with the new champion when it is absent, and only updates it when it exists.
+
+### Removed
+- Dropped `DatabricksResource.predict`.
+
+### Fixed
+- `notebooks/99_endpoint_deployment.ipynb` now waits until the endpoint reports `READY` before the warm-up request.
+- The simulator now shows a warning notification when a prediction fails (e.g. the serving endpoint is absent) instead of silently hiding the result.
+
 ## [3.1.3] - 2026-09-18
 
 Improved weekly backfills and scraping reliability after timezone-related parsing failures.

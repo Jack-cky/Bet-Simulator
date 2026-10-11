@@ -3,7 +3,8 @@ import json
 import mlflow
 import pandas as pd
 from dagster import ConfigurableResource, InitResourceContext
-from mlflow import MlflowClient
+from mlflow import ActiveRun, MlflowClient
+from mlflow.pyfunc import PyFuncModel
 
 
 class MlflowResource(ConfigurableResource):
@@ -50,7 +51,7 @@ class MlflowResource(ConfigurableResource):
             artefacts = json.load(f)
         return artefacts
 
-    def start_run(self, run_name: str):
+    def start_run(self, run_name: str) -> ActiveRun:
         return mlflow.start_run(run_name=run_name)
 
     def set_tag(self, key: str, value: str) -> None:
@@ -96,7 +97,7 @@ class MlflowResource(ConfigurableResource):
             alias=alias,
         )
 
-    def load_model(self, model_name: str, alias: str = "challenger"):
+    def load_model(self, model_name: str, alias: str) -> PyFuncModel:
         return mlflow.pyfunc.load_model(
             f"models:/{self.get_model_uc(model_name)}@{alias}"
         )

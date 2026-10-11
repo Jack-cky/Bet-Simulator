@@ -3,9 +3,8 @@ FROM python:3.12.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore
+    UV_SYSTEM_PYTHON=1 \
+    UV_NO_CACHE=1
 
 WORKDIR /app
 
@@ -14,10 +13,11 @@ COPY betsim/shared ./betsim/shared
 COPY betsim/pipeline ./betsim/pipeline
 COPY pyproject.toml ./
 
-RUN apt-get update && \
+RUN --mount=from=ghcr.io/astral-sh/uv:0.10.11,source=/uv,target=/bin/uv \
+    apt-get update && \
     apt-get install -y --no-install-recommends git libgomp1 && \
-    pip install --no-cache-dir --no-compile ".[pipeline]" && \
-    pip uninstall -y nvidia-nccl-cu12 kaleido && \
+    uv pip install ".[pipeline]" && \
+    uv pip uninstall nvidia-nccl-cu12 kaleido && \
     apt-get purge -y --auto-remove git && \
     rm -rf /var/lib/apt/lists/* && \
     useradd --create-home betsim && \

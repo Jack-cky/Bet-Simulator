@@ -35,11 +35,7 @@ from betsim.pipeline.contracts import (
     ModelEvaluation,
     TrainingResult,
 )
-from betsim.pipeline.resources import (
-    DatabricksResource,
-    MlflowResource,
-    MySQLResource,
-)
+from betsim.pipeline.resources import MlflowResource, MySQLResource
 from betsim.shared.settings import MLflowConfig, SentinelConfig
 
 cloudpickle.register_pickle_by_value(sys.modules[__name__])
@@ -192,14 +188,14 @@ def fit_model(
 
 
 def get_prediction(
-    clf: xgb.XGBClassifier | PyFuncModel | DatabricksResource,
+    clf: xgb.XGBClassifier | PyFuncModel,
     X: pd.DataFrame,
 ) -> tuple[np.ndarray, np.ndarray]:
     match clf:
         case xgb.XGBClassifier():
             y_hat = clf.predict(X)
             pi_hat = clf.predict_proba(X)[:, 1]
-        case PyFuncModel() | DatabricksResource():
+        case PyFuncModel():
             prediction = clf.predict(X)
             y_hat = prediction["y_hat"]
             pi_hat = prediction["pi_hat"]
@@ -425,21 +421,23 @@ def train_candidate_model(
 def prepare_artefacts(
     mlflow: MlflowResource,
     df: pd.DataFrame,
-) -> tuple[xgb.XGBClassifier, pd.DataFrame, np.ndarray]:
+) -> tuple[dict[str, PyFuncModel], pd.DataFrame, np.ndarray]:
     _, _, test, period = split_datasets(df)
-    clf = mlflow.load_model(MLflowConfig.MODEL)
+    clfs = {
+        "champion": mlflow.load_model(MLflowConfig.MODEL, "champion"),
+        "challenger": mlflow.load_model(MLflowConfig.MODEL, "challenger"),
+    }
 
-    return clf, test, period[2]
+    return clfs, test, period[2]
 
 
 def evaluate_candidates(
-    databricks: DatabricksResource,
-    clf: xgb.XGBClassifier,
+    clfs: dict[str, PyFuncModel],
     test: pd.DataFrame,
     target: str = "hcap_res",
 ) -> tuple[dict[str, float], dict[str, float]]:
-    champion = get_prediction(databricks, test)
-    challenger = get_prediction(clf, test)
+    champion = get_prediction(clfs["champion"], test)
+    challenger = get_prediction(clfs["challenger"], test)
 
     metrics_cham = evaluate_model(test[target], *champion)
     metrics_chal = evaluate_model(test[target], *challenger)
@@ -481,15 +479,14 @@ def compare_performance(
 )
 def compare_model_performance(
     context: AssetExecutionContext,
-    databricks: DatabricksResource,
     mlflow: MlflowResource,
     mysql: MySQLResource,
     challenger: TrainingResult,
 ) -> Iterator[Output[ModelEvaluation]]:
     jleague = mysql.read("jleague")
-    clf, test, period = prepare_artefacts(mlflow, jleague)
+    clfs, test, period = prepare_artefacts(mlflow, jleague)
 
-    metrics = evaluate_candidates(databricks, clf, test)
+    metrics = evaluate_candidates(clfs, test)
     summary = compare_performance(*metrics)
 
     if not summary["is_promotable"]:

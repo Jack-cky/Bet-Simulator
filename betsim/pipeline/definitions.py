@@ -7,7 +7,7 @@ from dagster import (
 from . import checks
 from .assets import (
     cleansing,
-    deployment,
+    # deployment,
     engineering,
     ingestion,
     monitoring,
@@ -46,7 +46,7 @@ all_assets = load_assets_from_modules(
         publishing,
         monitoring,
         training,
-        deployment,
+        # deployment,
     ],
 )
 

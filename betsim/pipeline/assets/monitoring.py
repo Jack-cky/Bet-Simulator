@@ -3,11 +3,11 @@ from collections.abc import Iterator
 import nannyml as nml
 import pandas as pd
 from dagster import AssetExecutionContext, Output, RetryPolicy, asset
+from mlflow.pyfunc import PyFuncModel
 from nannyml.thresholds import StandardDeviationThreshold
 
 from betsim.pipeline.contracts import DriftDetection
 from betsim.pipeline.resources import (
-    DatabricksResource,
     GrafanaResource,
     MlflowResource,
     MySQLResource,
@@ -23,7 +23,7 @@ def get_model_artefacts(mlflow: MlflowResource) -> tuple[list[str], list[str]]:
 
 
 def split_reference_analysis(
-    databricks: DatabricksResource,
+    clf: PyFuncModel,
     df: pd.DataFrame,
     period: list[str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -35,7 +35,7 @@ def split_reference_analysis(
 
     for partition in (reference, analysis):
         partition.reset_index(drop=True, inplace=True)
-        prediction = databricks.predict(partition)
+        prediction = clf.predict(partition)
         partition[["y_hat", "pi_hat"]] = prediction[["y_hat", "pi_hat"]]
 
     return reference, analysis
@@ -178,14 +178,14 @@ def track_degeneration(
 )
 def monitor_drift(
     context: AssetExecutionContext,
-    databricks: DatabricksResource,
     grafana: GrafanaResource,
     mlflow: MlflowResource,
     mysql: MySQLResource,
 ) -> Iterator[Output[DriftDetection]]:
     jleague = mysql.read("jleague")
     features, period = get_model_artefacts(mlflow)
-    reference, analysis = split_reference_analysis(databricks, jleague, period)
+    clf = mlflow.load_model(MLflowConfig.MODEL, "champion")
+    reference, analysis = split_reference_analysis(clf, jleague, period)
 
     track_performance(grafana, reference, analysis)
     summary = track_degeneration(grafana, reference, analysis, features)
